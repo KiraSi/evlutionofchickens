@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>原鸡的奇幻演化 · 人工育种模拟器</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Segoe UI', 'Comic Sans MS', 'Chalkboard SE', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            padding: 8px; background: #3d2b1a;
+        }
+
+        .farm-scene {
+            position: relative; width: 100%; max-width: 1280px; height: 100vh; max-height: 100vh;
+            border-radius: 32px; overflow: hidden; display: flex; flex-direction: column;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 0 8px #6b4f2e, 0 0 0 12px #8b6b3e;
+            background:
+                radial-gradient(ellipse 60% 45% at 88% 6%, rgba(255, 245, 200, 0.85) 0%, rgba(255, 230, 150, 0.35) 30%, transparent 70%),
+                repeating-linear-gradient(180deg,
+                    #b8864f 0px, #c99a5e 6px, #b8864f 12px,
+                    #a87a45 14px, #b8864f 16px, #b8864f 24px,
+                    #a0703a 26px, #b8864f 30px),
+                linear-gradient(180deg, #9c703f 0%, #b8864f 40%, #a87a45 70%, #8b5e33 100%);
+        }
+        .farm-scene::before {
+            content: ""; position: absolute; bottom: 0; left: 0; width: 100%; height: 32%; z-index: 1;
+            background:
+                repeating-linear-gradient(115deg,
+                    rgba(180, 140, 70, 0.35) 0px, rgba(180, 140, 70, 0.35) 2px,
+                    transparent 2px, transparent 9px,
+                    rgba(150, 110, 50, 0.25) 9px, rgba(150, 110, 50, 0.25) 11px,
+                    transparent 11px, transparent 20px),
+                repeating-linear-gradient(25deg,
+                    rgba(120, 85, 40, 0.4) 0px, rgba(120, 85, 40, 0.4) 3px,
+                    transparent 3px, transparent 14px,
+                    rgba(160, 120, 60, 0.3) 14px, rgba(160, 120, 60, 0.3) 16px,
+                    transparent 16px, transparent 28px),
+                linear-gradient(180deg, #5a3d21 0%, #4a3018 35%, #3a2410 70%, #2e1b0a 100%);
+            box-shadow: inset 0 18px 30px rgba(0, 0, 0, 0.45), inset 0 -10px 20px rgba(0, 0, 0, 0.6);
+        }
+        .farm-scene::after {
+            content: ""; position: absolute; bottom: 32%; left: 0; width: 100%; height: 10px; z-index: 2;
+            background: linear-gradient(180deg, #6b4a26, #4a3016);
+            box-shadow: 0 3px 8px rgba(0, 0, 0, 0.5), inset 0 2px 2px rgba(255, 220, 150, 0.15);
+        }
+        .scene-content {
+            position: relative; z-index: 5; display: flex; flex-direction: column;
+            height: 100%; padding: 12px 20px 14px; gap: 10px;
+        }
+
+        .top-signboard {
+            display: flex; justify-content: space-between; align-items: center; gap: 16px;
+            background:
+                repeating-linear-gradient(90deg,
+                    #d4a96a 0px, #e0b87d 5px, #d4a96a 10px,
+                    #c79a58 12px, #d4a96a 15px, #d4a96a 22px,
+                    #bf8f4c 24px, #d4a96a 28px),
+                linear-gradient(180deg, #e6c088, #c99a55);
+            border-radius: 14px; padding: 8px 20px; border: 3px solid #7a5228;
+            box-shadow: 0 6px 0 #4e3012, 0 10px 18px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255, 240, 200, 0.6);
+            position: relative; flex-shrink: 0;
+        }
+        .top-signboard::before, .top-signboard::after {
+            content: ""; position: absolute; top: -14px; width: 5px; height: 14px;
+            background: linear-gradient(180deg, #8b6b3e, #5a3d1e); border-radius: 3px;
+        }
+        .top-signboard::before { left: 10%; }
+        .top-signboard::after { right: 10%; }
+
+        .target-box {
+            display: flex; align-items: center; gap: 10px; font-size: 1.05rem; font-weight: 800;
+            color: #3d2a10; text-shadow: 0 1px 0 rgba(255, 235, 190, 0.8); flex-wrap: wrap;
+        }
+        .target-icon { font-size: 1.7rem; }
+        .time-box {
+            background: linear-gradient(180deg, #4e3a1e, #2e1f0c); color: #ffe9a8;
+            padding: 6px 20px; border-radius: 36px; font-size: 1.1rem; font-weight: 800;
+            letter-spacing: 1.5px;
+            box-shadow: inset 0 -3px 0 #1a1106, 0 4px 0 #1a1106, 0 6px 10px rgba(0, 0, 0, 0.4);
+            border: 2px solid #8b6b3e; white-space: nowrap;
+        }
+        /* 首页：标题放大居中，隐藏时间显示 */
+        .top-signboard.home-mode .time-box { display: none; }
+        .top-signboard.home-mode .target-box {
+            width: 100%; justify-content: center; text-align: center;
+            font-size: 1.9rem; letter-spacing: 1px;
+        }
+        .top-signboard.home-mode .target-icon { font-size: 2.4rem; }
+
+        .target-selector {
+            display: flex; justify-content: center; align-items: center; gap: 14px;
+            background: rgba(255, 240, 200, 0.92); border-radius: 20px; padding: 10px 18px;
+            border: 3px dashed #b8892e; box-shadow: 0 4px 0 #7a5228, 0 8px 14px rgba(0,0,0,0.3);
+            flex-shrink: 0; flex-wrap: wrap; transition: opacity 0.3s, transform 0.3s;
+        }
+        .target-selector.hidden-selector { display: none; }
+        .selector-label { font-size: 1rem; font-weight: 800; color: #6b4a1a; margin-right: 4px; }
+        .target-option {
+            display: flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 40px;
+            background: linear-gradient(180deg, #fff8e0, #f5e6b8); border: 3px solid #c9a55a;
+            font-size: 1rem; font-weight: 800; color: #3d2a10; cursor: pointer;
+            box-shadow: 0 4px 0 #a07a35, 0 6px 10px rgba(0,0,0,0.2);
+            transition: transform 0.12s, box-shadow 0.12s, background 0.2s; user-select: none;
+        }
+        .target-option:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 7px 0 #a07a35, 0 10px 14px rgba(0,0,0,0.25);
+            background: linear-gradient(180deg, #fffbe8, #f9edc5);
+        }
+        .target-option.selected-option {
+            background: linear-gradient(180deg, #c8f0c8, #9bd89b); border-color: #3f8f3f;
+            box-shadow: 0 4px 0 #2e5c20, 0 6px 10px rgba(0,0,0,0.2), 0 0 0 3px #b9f6ca;
+        }
+        .target-option .opt-icon { font-size: 1.4rem; }
+
+        .breeding-stage {
+            flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 8px; overflow: hidden;
+        }
+
+        .timeline-wrapper {
+            position: relative; width: 100%; max-width: 980px; margin: 0 auto;
+            background: linear-gradient(180deg, #f5e6c4, #e8d4a8); border: 2px solid #c9a55a;
+            border-radius: 16px; padding: 4px 16px 5px;
+            box-shadow: 0 3px 0 #a07a35, 0 4px 10px rgba(0,0,0,0.2); flex-shrink: 0;
+        }
+        .tl-current {
+            font-size: 0.76rem; font-weight: 800; color: #6b4a1a; text-align: center;
+            letter-spacing: 0.5px; margin-bottom: 2px;
+        }
+        .tl-track {
+            position: relative; height: 10px; background: linear-gradient(180deg, #d4c09a, #b8a070);
+            border-radius: 5px; border: 1.5px solid #8a6534; margin: 0 6px;
+        }
+        .tl-progress {
+            position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+            background: linear-gradient(90deg, #8fd06a, #5ea03a); border-radius: 5px;
+            transition: width 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .tl-pointer {
+            position: absolute; top: 50%; left: 0%; width: 3px; height: 20px;
+            background: linear-gradient(180deg, #ff6b4a, #d63a1e); border-radius: 2px;
+            transform: translate(-50%, -50%);
+            transition: left 0.9s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5; box-shadow: 0 0 6px rgba(214, 58, 30, 0.55);
+        }
+        .tl-ends {
+            display: flex; justify-content: space-between; font-size: 0.62rem;
+            font-weight: 700; color: #8a6534; margin-top: 3px; padding: 0 4px;
+        }
+
+        .hay-platform {
+            position: relative; flex: 1; min-height: 0; width: 100%; max-width: 980px;
+            margin: 0 auto; border-radius: 30px; padding: 16px 16px 12px;
+            display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 18px;
+            background:
+                repeating-linear-gradient(120deg,
+                    rgba(200, 165, 90, 0.5) 0px, rgba(200, 165, 90, 0.5) 3px,
+                    transparent 3px, transparent 10px,
+                    rgba(160, 125, 60, 0.4) 10px, rgba(160, 125, 60, 0.4) 13px,
+                    transparent 13px, transparent 22px),
+                repeating-linear-gradient(35deg,
+                    rgba(140, 105, 50, 0.35) 0px, rgba(140, 105, 50, 0.35) 4px,
+                    transparent 4px, transparent 12px,
+                    rgba(180, 145, 80, 0.3) 12px, rgba(180, 145, 80, 0.3) 16px,
+                    transparent 16px, transparent 26px),
+                linear-gradient(180deg, #b08a4c 0%, #8a6534 60%, #6e4e25 100%);
+            box-shadow: 0 10px 0 #4a3016, 0 18px 30px rgba(0, 0, 0, 0.55),
+                inset 0 3px 6px rgba(255, 230, 170, 0.4), inset 0 -6px 10px rgba(40, 25, 8, 0.5);
+            border: 3px solid #5a3d1e; overflow: hidden;
+        }
+        .hay-platform::before {
+            content: "🌾  🌾  🌾"; position: absolute; bottom: -6px; left: 24px;
+            font-size: 1.2rem; opacity: 0.7; letter-spacing: 10px; pointer-events: none;
+        }
+
+        .chicken-card {
+            width: 175px; padding: 12px; border-radius: 22px;
+            background: repeating-linear-gradient(180deg,
+                    #fffdf5 0px, #fffdf5 4px, #fdf6e3 4px, #fdf6e3 5px),
+                linear-gradient(160deg, #fffef8, #f7edd6);
+            border: 3px solid #e3c98a;
+            box-shadow: 0 8px 0 #8a6534, 0 12px 20px rgba(0, 0, 0, 0.45),
+                inset 0 1px 3px rgba(255, 255, 255, 0.9);
+            text-align: center; position: relative;
+            transition: transform 0.16s ease, box-shadow 0.16s ease;
+            cursor: pointer; color: #2e2210; display: flex; flex-direction: column;
+            align-items: center; user-select: none; flex-shrink: 0;
+        }
+        .chicken-card:hover:not(.original-card):not(.disabled-card):not(.selected-card) {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 13px 0 #8a6534, 0 20px 28px rgba(0, 0, 0, 0.55),
+                inset 0 1px 3px rgba(255, 255, 255, 0.9);
+            z-index: 10;
+        }
+        .chicken-card.original-card {
+            background: linear-gradient(160deg, #fff6da, #f9e8b8); border-color: #ffb347;
+            box-shadow: 0 8px 0 #a5722e, 0 12px 20px rgba(0, 0, 0, 0.45),
+                inset 0 1px 3px rgba(255, 255, 255, 0.9);
+            cursor: default;
+        }
+        .chicken-card.selected-card {
+            border: 4px solid #3f8f3f;
+            box-shadow: 0 0 0 4px #b9f6ca, 0 8px 0 #2e5c20, 0 14px 22px rgba(0, 0, 0, 0.5),
+                inset 0 1px 3px rgba(255, 255, 255, 0.9);
+            transform: scale(1.03); cursor: default; z-index: 11;
+        }
+        .chicken-card.disabled-card {
+            opacity: 0.55; filter: grayscale(0.75) brightness(0.9);
+            cursor: default; pointer-events: none; transform: scale(0.96);
+        }
+        .chicken-avatar {
+            width: 62px; height: 62px; border-radius: 18px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.6rem; margin-bottom: 6px;
+            background: radial-gradient(circle at 35% 30%, #fffbe8, #f5e6c4);
+            border: 3px solid #d9b96a;
+            box-shadow: inset 0 2px 6px rgba(255, 255, 255, 0.8), 0 3px 6px rgba(120, 85, 30, 0.25);
+        }
+        .chicken-name {
+            font-weight: 800; font-size: 0.98rem; background: #efe3c9; padding: 3px 12px;
+            border-radius: 24px; margin-bottom: 8px; color: #4e3e1e;
+            box-shadow: inset 0 1px 3px rgba(255,255,255,0.8), 0 2px 3px rgba(0,0,0,0.12);
+        }
+        .stat {
+            display: flex; justify-content: space-between; width: 100%; font-size: 0.88rem;
+            padding: 4px 9px; border-radius: 16px;
+            background: linear-gradient(180deg, #f9f2e0, #f1e6cc); margin-bottom: 4px;
+            font-weight: 700;
+            box-shadow: inset 0 1px 2px rgba(255, 255, 255, 0.9), 0 1px 2px rgba(100, 70, 20, 0.12);
+        }
+        .stat span:first-child { color: #6b5a33; }
+        .stat span:last-child { color: #1f4f1f; font-weight: 900; }
+
+        .original-layout {
+            display: flex; align-items: stretch; justify-content: center; gap: 24px;
+            width: 100%; max-width: 760px; margin: 0 auto;
+        }
+        .original-layout .chicken-card { width: 190px; flex-shrink: 0; }
+        .original-description {
+            flex: 1; max-width: 480px;
+            background: linear-gradient(160deg, #fff8e3, #f9edc9);
+            border: 3px solid #d9b96a; border-radius: 22px; padding: 20px 22px;
+            box-shadow: 0 8px 0 #8a6534, 0 12px 20px rgba(0, 0, 0, 0.35),
+                inset 0 1px 3px rgba(255, 255, 255, 0.9);
+            text-align: left; color: #3d2a10; display: flex; flex-direction: column;
+            justify-content: center; gap: 10px; align-self: center;
+        }
+        .original-description h3 {
+            font-size: 1.18rem; font-weight: 900; color: #8a3b10;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .original-description p { font-size: 0.94rem; line-height: 1.65; font-weight: 600; color: #4b3a1c; }
+        .original-description .highlight {
+            color: #b45309; font-weight: 900; background: rgba(255, 220, 130, 0.55);
+            padding: 0 3px; border-radius: 4px;
+        }
+        .original-intro-badge {
+            display: none; margin-top: 8px; font-size: 0.7rem; line-height: 1.4;
+            color: #5a451f; background: rgba(255, 248, 220, 0.9);
+            border-radius: 10px; padding: 5px 7px; border: 1px dashed #c9a55a;
+            text-align: left; font-weight: 600;
+        }
+        .original-intro-badge .highlight { color: #b45309; font-weight: 800; }
+
+        .stamp {
+            position: absolute; top: 42%; left: 50%;
+            transform: translate(-50%, -50%) rotate(-14deg);
+            background: rgba(200, 30, 30, 0.88); color: #ffeaea;
+            font-size: 1.5rem; font-weight: 900; padding: 5px 16px;
+            border: 4px solid #ff2a2a; border-radius: 12px; letter-spacing: 4px;
+            opacity: 0; animation: stampAppear 0.55s forwards;
+            pointer-events: none; white-space: nowrap;
+            box-shadow: 0 0 14px rgba(255, 0, 0, 0.6); z-index: 20;
+        }
+        @keyframes stampAppear {
+            0% { opacity: 0; transform: translate(-50%, -50%) rotate(-14deg) scale(2.6); }
+            100% { opacity: 1; transform: translate(-50%, -50%) rotate(-14deg) scale(1); }
+        }
+
+        .bottom-panel { display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+        .button-row { display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; }
+        .btn {
+            background: repeating-linear-gradient(90deg,
+                    #d4a96a 0px, #e0b87d 5px, #d4a96a 10px,
+                    #c79a58 12px, #d4a96a 15px, #d4a96a 22px,
+                    #bf8f4c 24px, #d4a96a 28px),
+                linear-gradient(180deg, #e6c088, #c99a55);
+            border: 3px solid #7a5228; border-radius: 50px; padding: 10px 28px;
+            font-size: 1.1rem; font-weight: 800; color: #3d2a10;
+            text-shadow: 0 1px 0 rgba(255, 240, 200, 0.7);
+            box-shadow: 0 6px 0 #4e3012, 0 9px 14px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 245, 210, 0.7);
+            cursor: pointer; transition: all 0.08s ease; letter-spacing: 1px; white-space: nowrap;
+        }
+        .btn:active { transform: translateY(5px); box-shadow: 0 2px 0 #4e3012, 0 5px 10px rgba(0, 0, 0, 0.4); }
+        .btn:disabled { opacity: 0.5; transform: translateY(3px); box-shadow: 0 4px 0 #4e3012;
+            pointer-events: none; filter: grayscale(0.5); }
+        .btn-secondary {
+            background: repeating-linear-gradient(90deg,
+                    #8fbf6a 0px, #a3d17f 5px, #8fbf6a 10px,
+                    #7aab55 12px, #8fbf6a 15px, #8fbf6a 22px,
+                    #6e9c48 24px, #8fbf6a 28px),
+                linear-gradient(180deg, #a8d68a, #7eb35a);
+            border-color: #4e6b2e; color: #1e2f10;
+            box-shadow: 0 6px 0 #36501e, 0 9px 14px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(230, 255, 200, 0.7);
+        }
+
+        .chart-container {
+            background: repeating-linear-gradient(0deg,
+                    rgba(255, 250, 235, 0.9) 0px, rgba(255, 250, 235, 0.9) 2px,
+                    rgba(250, 240, 215, 0.9) 2px, rgba(250, 240, 215, 0.9) 4px),
+                linear-gradient(180deg, #fffbf0, #f5ebd0);
+            border-radius: 20px; padding: 8px 14px 6px;
+            box-shadow: inset 0 0 0 3px #e6d6a8, 0 5px 0 #8a6534, 0 8px 14px rgba(0, 0, 0, 0.35);
+            border: 2px solid #c9b27c; transition: opacity 0.3s;
+        }
+        .chart-container.chart-hidden { display: none; }
+        .chart-title {
+            font-size: 0.82rem; font-weight: 800; color: #6b5a33; margin-bottom: 4px;
+            display: flex; align-items: center; gap: 5px;
+        }
+        #lineChart { width: 100%; height: 80px; display: block; }
+
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(20, 12, 4, 0.78); display: flex;
+            justify-content: center; align-items: center; z-index: 1000;
+            visibility: hidden; opacity: 0; transition: opacity 0.35s;
+            backdrop-filter: blur(3px); padding: 16px;
+        }
+        .modal-overlay.show { visibility: visible; opacity: 1; }
+        .modal-content {
+            position: relative;
+            background: repeating-linear-gradient(180deg,
+                    #fffdf5 0px, #fffdf5 5px, #fdf6e3 5px, #fdf6e3 7px),
+                linear-gradient(160deg, #fffef8, #f7edd6);
+            border-radius: 40px 40px 24px 24px; max-width: 640px; width: 100%;
+            padding: 18px 22px;
+            box-shadow: 0 18px 0 #8a6534, 0 24px 40px rgba(0, 0, 0, 0.6),
+                inset 0 2px 6px rgba(255, 255, 255, 0.9);
+            border: 4px solid #e3c98a; text-align: center; overflow: hidden;
+            transform-origin: center center;
+            transform: scale(0.92); transition: transform 0.25s ease;
+        }
+
+        .modal-close {
+            position: absolute; top: 10px; right: 14px; width: 36px; height: 36px;
+            border-radius: 50%; border: 3px solid #c9a55a;
+            background: linear-gradient(180deg, #fff8e0, #f5e6b8); color: #6b4a1a;
+            font-size: 1.2rem; font-weight: 900; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 3px 0 #a07a35; transition: all 0.1s ease;
+            z-index: 10; line-height: 1; padding: 0;
+        }
+        .modal-close:hover { background: linear-gradient(180deg, #fffbe8, #f9edc5); }
+        .modal-close:active { transform: translateY(2px); box-shadow: 0 1px 0 #a07a35; }
+
+        .modal-title {
+            font-size: 1.45rem; color: #3e2f13; margin-bottom: 8px;
+            display: flex; align-items: center; justify-content: center; gap: 10px;
+            flex-wrap: wrap; padding-right: 20px;
+        }
+        .modal-badge { font-size: 2.2rem; }
+        /* 解锁品种名称强调 */
+        .unlock-name {
+            display: inline-block; padding: 2px 12px 3px; border-radius: 14px;
+            color: #fff8e0; font-size: 1.12em; line-height: 1.35;
+            background: linear-gradient(180deg, #ffa73c, #e2621b);
+            text-shadow: 0 2px 0 rgba(120, 40, 0, 0.35);
+            box-shadow: 0 3px 0 #9c3d10, 0 6px 14px rgba(210, 100, 20, 0.4);
+            animation: unlock-pop 0.55s ease;
+        }
+        @keyframes unlock-pop {
+            0% { transform: scale(0.7); }
+            60% { transform: scale(1.12); }
+            100% { transform: scale(1); }
+        }
+        .modal-desc {
+            background: linear-gradient(180deg, #fff7d9, #fdeeb8); padding: 10px 14px;
+            border-radius: 18px; font-size: 0.92rem; line-height: 1.5; color: #2f2a1a;
+            margin: 8px 0; box-shadow: inset 0 0 0 3px #e6c67a, 0 4px 10px rgba(120, 90, 30, 0.15);
+            text-align: left;
+        }
+        .modal-desc strong { color: #b45309; }
+
+        .quiz-box {
+            background: linear-gradient(180deg, #e8f5e0, #d4ecc8); border: 3px solid #7eb35a;
+            border-radius: 20px; padding: 10px 14px; margin: 8px 0;
+            box-shadow: inset 0 0 0 3px #a8d68a, 0 4px 10px rgba(80, 120, 40, 0.2);
+        }
+        .quiz-question { font-size: 0.95rem; font-weight: 800; color: #2e4a1a; margin-bottom: 4px; text-align: left; }
+        .quiz-question .quiz-blank {
+            display: inline-block; min-width: 60px; color: #b45309; font-weight: 900;
+            border-bottom: 3px dashed #b45309; text-align: center;
+        }
+        .quiz-hint { font-size: 0.8rem; font-weight: 700; color: #5a6b3a; margin-bottom: 8px; text-align: left; }
+        .quiz-options { display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+        .quiz-option {
+            background: linear-gradient(180deg, #fffbe8, #f5e6b8); border: 3px solid #c9a55a;
+            border-radius: 40px; padding: 8px 20px; font-size: 1.05rem; font-weight: 900;
+            color: #3d2a10; cursor: pointer;
+            box-shadow: 0 4px 0 #a07a35, 0 6px 10px rgba(0,0,0,0.15);
+            transition: transform 0.1s, box-shadow 0.1s, background 0.2s; user-select: none;
+        }
+        .quiz-option:hover { transform: translateY(-2px); box-shadow: 0 6px 0 #a07a35, 0 8px 12px rgba(0,0,0,0.2); }
+        .quiz-option.correct {
+            background: linear-gradient(180deg, #c8f0c8, #9bd89b); border-color: #3f8f3f;
+            box-shadow: 0 4px 0 #2e5c20, 0 0 0 3px #b9f6ca;
+        }
+        .quiz-option.wrong {
+            background: linear-gradient(180deg, #ffd4d4, #ffb3b3); border-color: #c0392b;
+            box-shadow: 0 4px 0 #8a2419; animation: shake 0.4s;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); } 20% { transform: translateX(-6px); }
+            40% { transform: translateX(6px); } 60% { transform: translateX(-4px); }
+            80% { transform: translateX(4px); }
+        }
+        .quiz-feedback { font-size: 0.95rem; font-weight: 800; min-height: 20px; margin-bottom: 4px; text-align: center; }
+        .quiz-feedback.correct-feedback { color: #2e7d32; }
+        .quiz-feedback.wrong-feedback { color: #c0392b; }
+        .quiz-explanation {
+            font-size: 0.92rem; font-weight: 700; color: #4b5e2e; background: #f3f9ec;
+            border-radius: 12px; padding: 8px 12px; text-align: left; border: 2px dashed #9bc47a;
+        }
+        .class-compare-tip {
+            font-size: 0.84rem; font-weight: 700; color: #6b4a1a; background: #fff6d9;
+            border-radius: 16px; padding: 8px 12px; margin: 8px 0;
+            border: 2px dashed #d9b96a; text-align: left; line-height: 1.5;
+        }
+        .class-compare-tip strong { color: #b45309; }
+
+        .modal-btn {
+            background: repeating-linear-gradient(90deg,
+                    #d4a96a 0px, #e0b87d 5px, #d4a96a 10px,
+                    #c79a58 12px, #d4a96a 15px, #d4a96a 22px,
+                    #bf8f4c 24px, #d4a96a 28px),
+                linear-gradient(180deg, #e6c088, #c99a55);
+            border: 3px solid #7a5228; border-radius: 50px; padding: 10px 32px;
+            font-size: 1.1rem; font-weight: 800; color: #3d2a10;
+            box-shadow: 0 6px 0 #4e3012, 0 9px 14px rgba(0, 0, 0, 0.4),
+                inset 0 2px 4px rgba(255, 245, 210, 0.7);
+            cursor: pointer; transition: all 0.08s ease; margin-top: 8px;
+        }
+        .modal-btn:active { transform: translateY(5px); box-shadow: 0 2px 0 #4e3012; }
+        .hidden { display: none !important; }
+
+        @media (max-width: 900px) {
+            .chicken-card { width: 150px; padding: 10px 9px; }
+            .chicken-avatar { width: 52px; height: 52px; font-size: 2.2rem; border-radius: 14px; }
+            .chicken-name { font-size: 0.86rem; padding: 2px 9px; }
+            .stat { font-size: 0.78rem; padding: 3px 7px; }
+            .btn { padding: 8px 20px; font-size: 0.98rem; }
+            .time-box { font-size: 0.95rem; padding: 5px 14px; }
+            .target-box { font-size: 0.92rem; }
+            .top-signboard { padding: 6px 14px; }
+            #lineChart { height: 70px; }
+            .target-option { padding: 6px 12px; font-size: 0.88rem; }
+            .selector-label { font-size: 0.88rem; }
+            .original-layout { gap: 16px; max-width: 620px; }
+            .original-layout .chicken-card { width: 170px; }
+            .original-description { padding: 16px; }
+        }
+        @media (max-width: 720px) {
+            .original-layout { flex-direction: column; align-items: center; gap: 12px; max-width: 420px; }
+            .original-layout .chicken-card { width: 150px; }
+            .original-description { width: 100%; max-width: 400px; padding: 12px 14px; text-align: left; }
+        }
+        @media (max-width: 600px) {
+            .chicken-card { width: 130px; padding: 8px 7px; }
+            .chicken-avatar { width: 44px; height: 44px; font-size: 1.8rem; border-radius: 12px; }
+            .chicken-name { font-size: 0.78rem; padding: 2px 8px; margin-bottom: 5px; }
+            .stat { font-size: 0.7rem; padding: 2px 6px; border-radius: 12px; }
+            .hay-platform { gap: 10px; padding: 10px 8px; }
+            .scene-content { padding: 8px 12px 10px; gap: 6px; }
+            .target-selector { gap: 8px; padding: 8px 10px; }
+            .target-option { padding: 5px 10px; font-size: 0.8rem; }
+            .timeline-wrapper { padding: 3px 10px 4px; }
+            .tl-current { font-size: 0.68rem; }
+            .tl-ends { font-size: 0.55rem; }
+            .modal-close { top: 6px; right: 8px; width: 30px; height: 30px; font-size: 1rem; }
+            #lineChart { height: 65px; }
+            .top-signboard.home-mode .target-box { font-size: 1.15rem; }
+            .top-signboard.home-mode .target-icon { font-size: 1.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="farm-scene">
+    <div class="scene-content">
+
+        <div class="top-signboard home-mode" id="topSignboard">
+            <div class="target-box">
+                <span class="target-icon" id="targetIcon">🥚</span>
+                <span id="targetText">原鸡的奇幻演化-人工育种模拟器</span>
+            </div>
+            <div class="time-box" id="timeDisplay">约 7500 年前</div>
+        </div>
+
+        <div class="target-selector" id="targetSelector">
+            <span class="selector-label">🎯 请选择培育目标：</span>
+            <div class="target-option" data-target="egg" id="optEgg">
+                <span class="opt-icon">🥚</span> A · 产蛋指数 ≥ 50
+            </div>
+            <div class="target-option" data-target="meat" id="optMeat">
+                <span class="opt-icon">🍗</span> B · 肉质指数 ≥ 50
+            </div>
+            <div class="target-option" data-target="feather" id="optFeather">
+                <span class="opt-icon">🪶</span> C · 羽长指数 ≥ 50
+            </div>
+        </div>
+
+        <div class="breeding-stage">
+            <div class="timeline-wrapper hidden" id="timelineWrapper">
+                <div class="tl-current" id="tlCurrent">约 7500 年前</div>
+                <div class="tl-track">
+                    <div class="tl-progress" id="tlProgress"></div>
+                    <div class="tl-pointer" id="tlPointer"></div>
+                </div>
+                <div class="tl-ends">
+                    <span>7500年前</span>
+                    <span>现在</span>
+                </div>
+            </div>
+            <div class="hay-platform" id="breedingArea"></div>
+        </div>
+
+        <div class="bottom-panel">
+            <div class="button-row">
+                <button class="btn" id="breedBtn" disabled>🐣 开始孵化第 1 代</button>
+                <button class="btn btn-secondary hidden" id="nextGenBtn">🔄 繁育下一代</button>
+            </div>
+            <div class="chart-container chart-hidden" id="chartContainer">
+                <div class="chart-title">📈 培育进度折线图</div>
+                <canvas id="lineChart" width="900" height="90"></canvas>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<div class="modal-overlay" id="resultModal">
+    <div class="modal-content" id="modalContent">
+        <button class="modal-close" id="modalCloseBtn" title="关闭弹窗">✕</button>
+        <div class="modal-title">
+            <span class="modal-badge" id="resultEmoji">🏆</span>
+            <span id="resultTitle">培育成功！</span>
+        </div>
+        <div class="modal-desc" id="resultDesc"></div>
+
+        <div class="quiz-box" id="quizBox">
+            <div class="quiz-question">
+                🧮 你用了 <span class="quiz-blank" id="quizGenBlank">?</span> 代，总共经历了约 <strong id="quizTotalYears">?</strong> 年。
+            </div>
+            <div class="quiz-hint">先看看屏幕上方现在是第几代，再想想 7500 年前推进到距今多少年，一共经历了多少年？</div>
+            <div class="quiz-options" id="quizOptions"></div>
+            <div class="quiz-feedback" id="quizFeedback"></div>
+            <div class="quiz-explanation hidden" id="quizExplanation"></div>
+        </div>
+
+        <div class="class-compare-tip">
+            📊 <strong>和别的小组比一比：</strong>你们用的代数一样吗？如果不一样，这是为什么呢？想想看，每一代生出的小鸡，是不是都按同样的方向变化？
+        </div>
+
+        <button class="modal-btn" id="restartBtn">🔁 重新挑战</button>
+    </div>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        /* ============================================================
+           可调参数
+           ============================================================ */
+        const BASE_YEAR_AGO = 7500;
+        const TARGET_VALUE = 50;
+        const MUTATION_MIN = -3;
+        const MUTATION_MAX = 5;
+        const INITIAL_STATS = { egg: 10, meat: 10, feather: 10 };
+
+        const BASE_TARGET_END = {
+            'egg': 200,
+            'meat': 1600,
+            'feather': 250
+        };
+
+        // 蛋肉兼用（狼山鸡）解锁条件：
+        // 产蛋 ≥ 50 且 产肉 ≥ 45，或 产蛋 ≥ 45 且 产肉 ≥ 50
+        const DUAL_EGG_HIGH = 50;
+        const DUAL_MEAT_MID = 45;
+        const DUAL_EGG_MID = 45;
+        const DUAL_MEAT_HIGH = 50;
+        const DUAL_END_YEARS = 150;
+
+        const STEP_RATIO = 0.22;
+
+        const GOALS = {
+            'egg': {
+                name: '产蛋指数', icon: '🥚', unlockName: '来航鸡', unlockPrefix: '高产蛋', emoji: '🐔🥚',
+                desc: '现实中现代来航鸡的育成在 <strong>19世纪</strong>。<br><br>🧬 <strong>冷知识：</strong>野生原鸡下完蛋就要“抱窝”孵小鸡，一抱就是二十多天，期间不下蛋，所以一年只下 <strong>8-12 枚</strong>。来航鸡一年能下 <strong>300 多枚</strong>，是因为人类一代代专挑 <strong>“不爱抱窝”</strong> 的鸡留种。<strong>不是鸡变勤快了，是人类把“爱抱窝”的鸡淘汰掉了。</strong>'
+            },
+            'meat': {
+                name: '肉质指数', icon: '🍗', unlockName: '三黄胡须鸡', emoji: '🍗🐓',
+                desc: '你培育出了肉质肥美的鸡。<br><br>据西晋《广志》记载，<strong>公元3-4世纪</strong>就出现了三黄胡须鸡的祖先。'
+            },
+            'feather': {
+                name: '羽长指数', icon: '🪶', unlockName: '长尾鸡', emoji: '🪶🐦',
+                desc: '你培育出了观赏鸡。<br><br>这是日本培育的品种，历史约 <strong>200-300年</strong>。<br><br>🧬 这证明了人类的审美需求，同样能极大改变生物的形态。'
+            }
+        };
+
+        /* ============================================================
+           全局状态
+           ============================================================ */
+        let currentTarget = null;
+        let yearsAgo = BASE_YEAR_AGO;
+        let generation = 0;
+        let selectedChicken = null;
+        // 折线图数据：每项 { xPercent: 0~1的时间位置, value: 目标指数, gen: 第几代 }
+        let historyPoints = [];
+        let gameFinished = false;
+        let waitingForSelection = false;
+        let currentChickens = [];
+        let modalClosed = false;
+        let animating = false;
+
+        /* ============================================================
+           DOM 引用
+           ============================================================ */
+        const topSignboard = document.getElementById('topSignboard');
+        const timelineWrapper = document.getElementById('timelineWrapper');
+        const breedingArea = document.getElementById('breedingArea');
+        const timeDisplay = document.getElementById('timeDisplay');
+        const breedBtn = document.getElementById('breedBtn');
+        const nextGenBtn = document.getElementById('nextGenBtn');
+        const targetIcon = document.getElementById('targetIcon');
+        const targetText = document.getElementById('targetText');
+        const resultModal = document.getElementById('resultModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalCloseBtn = document.getElementById('modalCloseBtn');
+        const resultEmoji = document.getElementById('resultEmoji');
+        const resultTitle = document.getElementById('resultTitle');
+        const resultDesc = document.getElementById('resultDesc');
+        const restartBtn = document.getElementById('restartBtn');
+        const canvas = document.getElementById('lineChart');
+        const ctx = canvas.getContext('2d');
+        const targetSelector = document.getElementById('targetSelector');
+        const optEgg = document.getElementById('optEgg');
+        const optMeat = document.getElementById('optMeat');
+        const optFeather = document.getElementById('optFeather');
+        const chartContainer = document.getElementById('chartContainer');
+        const quizGenBlank = document.getElementById('quizGenBlank');
+        const quizTotalYears = document.getElementById('quizTotalYears');
+        const quizOptions = document.getElementById('quizOptions');
+        const quizFeedback = document.getElementById('quizFeedback');
+        const quizExplanation = document.getElementById('quizExplanation');
+        const tlCurrent = document.getElementById('tlCurrent');
+        const tlProgress = document.getElementById('tlProgress');
+        const tlPointer = document.getElementById('tlPointer');
+
+        /* ============================================================
+           工具函数
+           ============================================================ */
+        function formatYearsAgo(y) {
+            if (y <= 0) return '公元 1 年';
+            return '约 ' + Math.round(y) + ' 年前';
+        }
+
+        function mutateStat(base) {
+            const delta = Math.floor(Math.random() * (MUTATION_MAX - MUTATION_MIN + 1)) + MUTATION_MIN;
+            return Math.max(1, base + delta);
+        }
+
+        function getTargetStat(chicken) {
+            if (currentTarget === 'egg') return chicken.egg;
+            if (currentTarget === 'meat') return chicken.meat;
+            return chicken.feather;
+        }
+
+        function setTargetStat(chicken, value) {
+            if (currentTarget === 'egg') chicken.egg = value;
+            else if (currentTarget === 'meat') chicken.meat = value;
+            else chicken.feather = value;
+        }
+
+        function getBaseTargetEnd() {
+            return BASE_TARGET_END[currentTarget] || 200;
+        }
+
+        function isDualPurpose(chicken) {
+            return (chicken.egg >= DUAL_EGG_HIGH && chicken.meat >= DUAL_MEAT_MID) ||
+                (chicken.egg >= DUAL_EGG_MID && chicken.meat >= DUAL_MEAT_HIGH);
+        }
+
+        function getFinalTargetEnd(chicken) {
+            // 蛋肉兼用型（狼山鸡）按真实育成历史约 150 年收尾
+            if (currentTarget !== 'feather' && isDualPurpose(chicken)) {
+                return DUAL_END_YEARS;
+            }
+            return getBaseTargetEnd();
+        }
+
+        function getDynamicStep() {
+            const baseEnd = getBaseTargetEnd();
+            const remaining = Math.max(0, yearsAgo - baseEnd);
+            if (remaining <= 0) return 0;
+            return Math.max(1, Math.round(remaining * STEP_RATIO));
+        }
+
+        function updateTimeline() {
+            const total = BASE_YEAR_AGO;
+            const progress = Math.max(0, Math.min(1, (total - yearsAgo) / total));
+            const percent = progress * 100;
+            tlPointer.style.left = percent + '%';
+            tlProgress.style.width = percent + '%';
+            tlCurrent.textContent = formatYearsAgo(yearsAgo);
+        }
+
+        function updateYearDisplay() {
+            timeDisplay.textContent = formatYearsAgo(yearsAgo);
+        }
+
+        function animateYear(from, to, duration, callback) {
+            animating = true;
+            tlPointer.style.transition = 'none';
+            tlProgress.style.transition = 'none';
+
+            const startTime = performance.now();
+            const diff = to - from;
+
+            function frame(now) {
+                const elapsed = now - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                const eased = 1 - Math.pow(1 - progress, 3);
+                yearsAgo = Math.round(from + diff * eased);
+                updateYearDisplay();
+                updateTimeline();
+
+                if (progress < 1) {
+                    requestAnimationFrame(frame);
+                } else {
+                    yearsAgo = to;
+                    updateYearDisplay();
+                    updateTimeline();
+                    tlPointer.style.transition = '';
+                    tlProgress.style.transition = '';
+                    animating = false;
+                    if (callback) callback();
+                }
+            }
+            requestAnimationFrame(frame);
+        }
+
+        function updateTargetDisplay() {
+            if (!currentTarget) {
+                targetIcon.textContent = '🎯';
+                targetText.textContent = '原鸡的奇幻演化-人工育种模拟器';
+                topSignboard.classList.add('home-mode');
+                timelineWrapper.classList.add('hidden');
+                return;
+            }
+            topSignboard.classList.remove('home-mode');
+            timelineWrapper.classList.remove('hidden');
+            const goal = GOALS[currentTarget];
+            targetIcon.textContent = goal.icon;
+            const label = currentTarget === 'egg' ? 'A' : (currentTarget === 'meat' ? 'B' : 'C');
+            targetText.textContent = `目标${label}：培育${goal.name} ≥ ${TARGET_VALUE}`;
+        }
+
+        function checkGoal(chicken) {
+            // 除观赏需求外，达成“产蛋 + 产肉”双高条件可直接解锁狼山鸡
+            if (currentTarget !== 'feather' && isDualPurpose(chicken)) return true;
+            return getTargetStat(chicken) >= TARGET_VALUE;
+        }
+
+        function ensureBadChick(chickens, baseTargetStat) {
+            const hasBad = chickens.some(c => getTargetStat(c) < baseTargetStat);
+            if (hasBad) return;
+
+            const badIndex = Math.floor(Math.random() * 3);
+            const drop = 1 + Math.floor(Math.random() * 3);
+            const badValue = Math.max(1, baseTargetStat - drop);
+            setTargetStat(chickens[badIndex], badValue);
+        }
+
+        /* ============================================================
+           折线图（X轴按时间跨度，早期间隙大、后期密集）
+           ============================================================ */
+        function drawChart() {
+            const w = canvas.width;
+            const h = canvas.height;
+            ctx.clearRect(0, 0, w, h);
+
+            if (historyPoints.length === 0) {
+                ctx.font = 'bold 13px "Segoe UI", sans-serif';
+                ctx.fillStyle = '#b59b5e';
+                ctx.textAlign = 'center';
+                ctx.fillText('繁育后这里会出现折线，横轴按时间跨度展开', w / 2, h / 2 + 4);
+                return;
+            }
+
+            const paddingLeft = 30;
+            const paddingRight = 20;
+            const paddingTop = 14;
+            const paddingBottom = 20;
+            const chartW = w - paddingLeft - paddingRight;
+            const chartH = h - paddingTop - paddingBottom;
+
+            const maxVal = Math.max(TARGET_VALUE + 5, ...historyPoints.map(p => p.value), 20);
+            const minVal = 0;
+
+            // 目标参考线
+            ctx.beginPath();
+            ctx.strokeStyle = '#c0a86a';
+            ctx.lineWidth = 1.3;
+            ctx.setLineDash([5, 5]);
+            const targetY = paddingTop + chartH - (TARGET_VALUE - minVal) / (maxVal - minVal) * chartH;
+            ctx.moveTo(paddingLeft, targetY);
+            ctx.lineTo(w - paddingRight, targetY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            ctx.fillStyle = '#a5834b';
+            ctx.font = 'bold 9px "Segoe UI", sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText(`目标指数 ${TARGET_VALUE}`, paddingLeft + 2, targetY - 3);
+
+            // 折线（X 用时间比例）
+            ctx.beginPath();
+            ctx.strokeStyle = '#2e7d32';
+            ctx.lineWidth = 2.6;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+
+            historyPoints.forEach((p, i) => {
+                const x = paddingLeft + p.xPercent * chartW;
+                const y = paddingTop + chartH - (p.value - minVal) / (maxVal - minVal) * chartH;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+
+            // 数据点
+            historyPoints.forEach((p) => {
+                const x = paddingLeft + p.xPercent * chartW;
+                const y = paddingTop + chartH - (p.value - minVal) / (maxVal - minVal) * chartH;
+
+                ctx.beginPath();
+                ctx.fillStyle = p.value >= TARGET_VALUE ? '#2e7d32' : '#ffb347';
+                ctx.arc(x, y, 3.8, 0, 2 * Math.PI);
+                ctx.fill();
+                ctx.strokeStyle = p.value >= TARGET_VALUE ? '#1b4a1b' : '#b16f1a';
+                ctx.lineWidth = 1.6;
+                ctx.stroke();
+            });
+
+            // 只标注首、末和关键点数值（避免密集时重叠）
+            const labelIndices = new Set([0, historyPoints.length - 1]);
+            if (historyPoints.length > 2) {
+                // 每隔几代标一个，但避免和首末重叠
+                const step = Math.max(1, Math.ceil(historyPoints.length / 6));
+                for (let i = step; i < historyPoints.length - 1; i += step) {
+                    labelIndices.add(i);
+                }
+            }
+            ctx.fillStyle = '#3d2b0e';
+            ctx.font = 'bold 9px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            historyPoints.forEach((p, i) => {
+                if (!labelIndices.has(i)) return;
+                const x = paddingLeft + p.xPercent * chartW;
+                const y = paddingTop + chartH - (p.value - minVal) / (maxVal - minVal) * chartH;
+                // 防重叠：只在点上方标
+                ctx.fillText(p.value, x, y - 7);
+            });
+
+            // X轴时间刻度（对应年限）
+            const axisY = paddingTop + chartH;
+            const tickYears = [7500, 6000, 4500, 3000, 1500, 0];
+            ctx.fillStyle = '#6b5a33';
+            ctx.font = '9px "Segoe UI", sans-serif';
+            ctx.textAlign = 'center';
+            tickYears.forEach(yearAgoVal => {
+                const p = (BASE_YEAR_AGO - yearAgoVal) / BASE_YEAR_AGO;
+                const x = paddingLeft + p * chartW;
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(120, 90, 40, 0.45)';
+                ctx.lineWidth = 1;
+                ctx.moveTo(x, axisY);
+                ctx.lineTo(x, axisY + 4);
+                ctx.stroke();
+                const label = yearAgoVal === 0 ? '现在' : `${yearAgoVal}年前`;
+                ctx.fillText(label, x, h - 4);
+            });
+
+            // 底部基线
+            ctx.beginPath();
+            ctx.strokeStyle = 'rgba(120, 90, 40, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.moveTo(paddingLeft, paddingTop + chartH);
+            ctx.lineTo(w - paddingRight, paddingTop + chartH);
+            ctx.stroke();
+        }
+
+        // 记录当前时间点（用于折线图）
+        function recordHistoryPoint(chicken) {
+            const total = BASE_YEAR_AGO;
+            const xPercent = Math.max(0, Math.min(1, (total - yearsAgo) / total));
+            historyPoints.push({
+                xPercent: xPercent,
+                value: getTargetStat(chicken),
+                gen: generation
+            });
+        }
+
+        /* ============================================================
+           渲染卡牌
+           ============================================================ */
+        function renderChickenCards(chickens, isOriginal = false, selectedIndex = -1, eliminatedIndices = []) {
+            breedingArea.innerHTML = '';
+            if (!chickens || chickens.length === 0) return;
+
+            if (isOriginal && !currentTarget) {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'original-layout';
+
+                const card = buildChickenCardElement(chickens[0], true, -1, []);
+                wrapper.appendChild(card);
+
+                const desc = document.createElement('div');
+                desc.className = 'original-description';
+                desc.innerHTML = `
+                    <h3>🐓 远古原鸡 · 家鸡的野生祖先</h3>
+                    <p>
+                        科学家通过 <span class="highlight">基因技术</span> 推测，
+                        人类大约在 <span class="highlight">7500 年前</span> 开始驯化原鸡。
+                        原鸡是热带森林中的鸟类，善于短距离飞行，体型轻盈，
+                        一年仅产 <span class="highlight">8-12 枚</span> 蛋，肉质紧实但量少。
+                        正是这些“不起眼”的野生特性，成为后来所有家鸡品种演化的起点。
+                    </p>
+                `;
+                wrapper.appendChild(desc);
+
+                breedingArea.appendChild(wrapper);
+                return;
+            }
+
+            chickens.forEach((chicken, idx) => {
+                const card = buildChickenCardElement(chicken, isOriginal, selectedIndex, eliminatedIndices, idx);
+                breedingArea.appendChild(card);
+            });
+        }
+
+        function buildChickenCardElement(chicken, isOriginal, selectedIndex, eliminatedIndices, idx = -1) {
+            const card = document.createElement('div');
+            card.className = 'chicken-card';
+            if (isOriginal) card.classList.add('original-card');
+            if (selectedIndex === idx) card.classList.add('selected-card');
+            if (eliminatedIndices.includes(idx)) card.classList.add('disabled-card');
+
+            if (!isOriginal && !gameFinished && waitingForSelection &&
+                !card.classList.contains('selected-card') &&
+                !eliminatedIndices.includes(idx)) {
+                card.addEventListener('click', () => handleSelectChicken(idx));
+            }
+
+            const targetStat = currentTarget ? getTargetStat(chicken) : 0;
+            const metGoal = currentTarget && (
+                targetStat >= TARGET_VALUE ||
+                (currentTarget !== 'feather' && isDualPurpose(chicken))
+            );
+            const avatarEmoji = isOriginal ? '🐓' : (chicken.emoji || '🐤');
+            const avatarBg = metGoal
+                ? 'radial-gradient(circle at 35% 30%, #d4ffd4, #a8e6a8)'
+                : 'radial-gradient(circle at 35% 30%, #fffbe8, #f5e6c4)';
+
+            let extraIntro = '';
+            if (isOriginal) {
+                extraIntro = `
+                    <div class="original-intro-badge">
+                        <span class="highlight">远古原鸡</span>是家鸡的野生祖先，
+                        科学家通过<span class="highlight">基因技术</span>推测，
+                        人类约在 <span class="highlight">7500 年前</span> 开始驯化原鸡。
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="chicken-avatar" style="background: ${avatarBg};">${avatarEmoji}</div>
+                <div class="chicken-name">${chicken.name || '小鸡'}</div>
+                <div class="stat"><span>🥚 产蛋指数</span><span>${chicken.egg}</span></div>
+                <div class="stat"><span>🍗 肉质指数</span><span>${chicken.meat}</span></div>
+                <div class="stat"><span>🪶 羽长指数</span><span>${chicken.feather}</span></div>
+                ${extraIntro}
+            `;
+
+            if (eliminatedIndices.includes(idx)) {
+                const stamp = document.createElement('div');
+                stamp.className = 'stamp';
+                stamp.textContent = '淘汰';
+                card.appendChild(stamp);
+            }
+
+            return card;
+        }
+
+        /* ============================================================
+           处理选择小鸡
+           ============================================================ */
+        function handleSelectChicken(index) {
+            if (gameFinished || !waitingForSelection || !currentTarget || animating) return;
+            const chicken = currentChickens[index];
+            if (!chicken) return;
+            if (selectedChicken) return;
+
+            selectedChicken = chicken;
+            waitingForSelection = false;
+
+            const eliminated = currentChickens.map((_, i) => i).filter(i => i !== index);
+            renderChickenCards(currentChickens, false, index, eliminated);
+
+            const isFinal = checkGoal(chicken);
+            generation++;
+
+            chartContainer.classList.remove('chart-hidden');
+
+            if (isFinal) {
+                const finalEnd = getFinalTargetEnd(chicken);
+                const step = getDynamicStep();
+                const intermediate = Math.max(finalEnd, yearsAgo - step);
+                yearsAgo = intermediate;
+                updateYearDisplay();
+                updateTimeline();
+
+                // 记录这一代的时间点（通关校准后的真实结束点稍后补记）
+                recordHistoryPoint(chicken);
+                drawChart();
+
+                gameFinished = true;
+                modalClosed = false;
+                breedBtn.disabled = true;
+                nextGenBtn.disabled = true;
+
+                setTimeout(() => {
+                    animateYear(intermediate, finalEnd, 1200, () => {
+                        // 动画完成后，把最后一个点更新到校准后的时间位置
+                        const total = BASE_YEAR_AGO;
+                        const xPercent = Math.max(0, Math.min(1, (total - yearsAgo) / total));
+                        if (historyPoints.length > 0) {
+                            historyPoints[historyPoints.length - 1].xPercent = xPercent;
+                        }
+                        drawChart();
+                        setTimeout(() => showResultModal(chicken), 400);
+                    });
+                }, 300);
+            } else {
+                const step = getDynamicStep();
+                yearsAgo = Math.max(0, yearsAgo - step);
+                updateYearDisplay();
+                updateTimeline();
+
+                recordHistoryPoint(chicken);
+                drawChart();
+
+                setTimeout(() => {
+                    nextGenBtn.classList.remove('hidden');
+                    breedBtn.classList.add('hidden');
+                }, 800);
+            }
+        }
+
+        /* ============================================================
+           繁育下一代
+           ============================================================ */
+        function breedNextGeneration() {
+            if (gameFinished || !currentTarget || animating) return;
+
+            const baseChicken = selectedChicken || {
+                name: '远古原鸡',
+                egg: INITIAL_STATS.egg,
+                meat: INITIAL_STATS.meat,
+                feather: INITIAL_STATS.feather,
+                emoji: '🐓'
+            };
+
+            const baseTargetStat = getTargetStat(baseChicken);
+
+            const newChickens = [];
+            for (let i = 0; i < 3; i++) {
+                newChickens.push({
+                    name: `小鸡 ${i + 1}`,
+                    egg: mutateStat(baseChicken.egg),
+                    meat: mutateStat(baseChicken.meat),
+                    feather: mutateStat(baseChicken.feather),
+                    emoji: ['🐤', '🐥', '🐣'][i]
+                });
+            }
+
+            ensureBadChick(newChickens, baseTargetStat);
+
+            currentChickens = newChickens;
+            selectedChicken = null;
+            waitingForSelection = true;
+
+            renderChickenCards(newChickens, false, -1, []);
+
+            nextGenBtn.classList.add('hidden');
+            breedBtn.classList.add('hidden');
+        }
+
+        /* ============================================================
+           课堂互动：算一算
+           ============================================================ */
+        function setupQuiz(totalYears, endYearsAgo) {
+            quizGenBlank.textContent = generation;
+            quizTotalYears.textContent = '?';
+
+            const correct = totalYears;
+            const wrong1 = totalYears + 800;
+            const wrong2 = Math.max(1, totalYears - 800);
+            const options = shuffle([correct, wrong1, wrong2]);
+
+            quizOptions.innerHTML = '';
+            quizFeedback.textContent = '';
+            quizFeedback.className = 'quiz-feedback';
+            quizExplanation.classList.add('hidden');
+            quizExplanation.innerHTML = '';
+
+            options.forEach(val => {
+                const btn = document.createElement('button');
+                btn.className = 'quiz-option';
+                btn.textContent = val + ' 年';
+                btn.dataset.value = val;
+                btn.addEventListener('click', () => handleQuizAnswer(val, correct, endYearsAgo));
+                quizOptions.appendChild(btn);
+            });
+        }
+
+        function handleQuizAnswer(selected, correct, endYearsAgo) {
+            const allBtns = quizOptions.querySelectorAll('.quiz-option');
+            if (quizOptions.dataset.answered === 'true') return;
+
+            if (selected === correct) {
+                quizOptions.dataset.answered = 'true';
+                quizTotalYears.textContent = correct;
+                allBtns.forEach(btn => {
+                    if (parseInt(btn.dataset.value) === correct) {
+                        btn.classList.add('correct');
+                    } else {
+                        btn.classList.add('wrong');
+                    }
+                });
+                quizFeedback.textContent = '✅ 答对啦！';
+                quizFeedback.className = 'quiz-feedback correct-feedback';
+                quizExplanation.classList.remove('hidden');
+                quizExplanation.innerHTML = `从 7500 年前推进到距今约 <strong>${endYearsAgo}</strong> 年，总耗时约 <strong>${correct} 年</strong>。`;
+                fitResultModal();
+            } else {
+                const clickedBtn = Array.from(allBtns).find(btn => parseInt(btn.dataset.value) === selected);
+                if (clickedBtn) {
+                    clickedBtn.classList.add('wrong');
+                    setTimeout(() => clickedBtn.classList.remove('wrong'), 500);
+                }
+                quizFeedback.textContent = '❌ 再想想：从 7500 年前推进到距今多少年？';
+                quizFeedback.className = 'quiz-feedback wrong-feedback';
+            }
+        }
+
+        function shuffle(arr) {
+            const a = arr.slice();
+            for (let i = a.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [a[i], a[j]] = [a[j], a[i]];
+            }
+            return a;
+        }
+
+        /* ============================================================
+           弹窗自适应缩放：保证内容在一屏内完整显示，不出现滚动
+           ============================================================ */
+        function fitResultModal() {
+            const availW = window.innerWidth - 32;
+            const availH = window.innerHeight - 32;
+            const naturalW = modalContent.offsetWidth;
+            const naturalH = modalContent.scrollHeight;
+            if (!naturalW || !naturalH) return;
+            const scale = Math.min(1, availW / naturalW, availH / naturalH);
+            modalContent.style.transform = `scale(${scale})`;
+        }
+        window.addEventListener('resize', () => {
+            if (resultModal.classList.contains('show')) fitResultModal();
+        });
+
+        /* ============================================================
+           显示通关弹窗
+           ============================================================ */
+        function showResultModal(chicken) {
+            const goal = GOALS[currentTarget];
+            const endYearsAgo = yearsAgo;
+            const totalYears = BASE_YEAR_AGO - endYearsAgo;
+
+            resultEmoji.textContent = goal.emoji;
+            resultTitle.innerHTML = `培育成功！解锁 ${goal.unlockPrefix || ''}<span class="unlock-name">${goal.unlockName}</span>`;
+            resultDesc.innerHTML = goal.desc;
+
+            if (currentTarget !== 'feather' && isDualPurpose(chicken)) {
+                resultEmoji.textContent = '🍗🐓✨';
+                resultTitle.innerHTML = '培育成功！解锁 <span class="unlock-name">狼山鸡</span>（蛋肉兼用型）';
+                resultDesc.innerHTML = `
+                    这只鸡的 <strong>产蛋指数 ${chicken.egg}</strong> 与 <strong>产肉指数 ${chicken.meat}</strong> 双双达到高水平，
+                    既产蛋多、又长肉快！<br><br>
+                    🧬 现实中的 <strong>狼山鸡</strong> 正是蛋肉兼用型品种，育成于 19 世纪（距今约 <strong>150 年</strong>）——
+                    人类同时保留了它的产蛋能力与产肉能力，这就是人工选择中的“兼顾型”成果。<br><br>
+                    <span style="font-size:0.88rem;color:#6b4a1a;">（触发条件：产蛋 ≥ ${DUAL_EGG_HIGH} 且产肉 ≥ ${DUAL_MEAT_MID}，或产蛋 ≥ ${DUAL_EGG_MID} 且产肉 ≥ ${DUAL_MEAT_HIGH}）</span>
+                `;
+            }
+
+            quizOptions.dataset.answered = 'false';
+            setupQuiz(totalYears, endYearsAgo);
+
+            fitResultModal();
+            resultModal.classList.add('show');
+        }
+
+        /* ============================================================
+           关闭弹窗
+           ============================================================ */
+        function closeResultModal() {
+            if (!resultModal.classList.contains('show')) return;
+            resultModal.classList.remove('show');
+            modalClosed = true;
+            if (gameFinished) {
+                nextGenBtn.classList.add('hidden');
+                breedBtn.classList.remove('hidden');
+                breedBtn.disabled = false;
+                breedBtn.textContent = '🔁 重新挑战';
+            }
+        }
+
+        /* ============================================================
+           目标选择逻辑
+           ============================================================ */
+        function selectTarget(targetKey) {
+            if (currentTarget) return;
+
+            currentTarget = targetKey;
+
+            [optEgg, optMeat, optFeather].forEach(el => el.classList.remove('selected-option'));
+            if (targetKey === 'egg') optEgg.classList.add('selected-option');
+            if (targetKey === 'meat') optMeat.classList.add('selected-option');
+            if (targetKey === 'feather') optFeather.classList.add('selected-option');
+
+            updateTargetDisplay();
+
+            targetSelector.style.opacity = '0';
+            targetSelector.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                targetSelector.classList.add('hidden-selector');
+            }, 280);
+
+            breedBtn.disabled = false;
+
+            // 折线图起点：原鸡在 x=0，值为初始10
+            historyPoints = [{
+                xPercent: 0,
+                value: INITIAL_STATS[currentTarget],
+                gen: 0
+            }];
+            drawChart();
+
+            const originalChicken = currentChickens[0];
+            if (originalChicken) {
+                renderChickenCards([originalChicken], true);
+            }
+        }
+
+        /* ============================================================
+           初始化游戏 / 重新开始
+           ============================================================ */
+        function initGame() {
+            gameFinished = false;
+            modalClosed = false;
+            animating = false;
+            waitingForSelection = false;
+            selectedChicken = null;
+            generation = 0;
+            yearsAgo = BASE_YEAR_AGO;
+            historyPoints = [];
+            currentChickens = [];
+            currentTarget = null;
+
+            targetSelector.classList.remove('hidden-selector');
+            targetSelector.style.opacity = '1';
+            targetSelector.style.transform = 'scale(1)';
+            [optEgg, optMeat, optFeather].forEach(el => el.classList.remove('selected-option'));
+
+            chartContainer.classList.add('chart-hidden');
+
+            tlPointer.style.transition = '';
+            tlProgress.style.transition = '';
+
+            updateYearDisplay();
+            updateTargetDisplay();
+            updateTimeline();
+            drawChart();
+
+            const originalChicken = {
+                name: '远古原鸡',
+                egg: INITIAL_STATS.egg,
+                meat: INITIAL_STATS.meat,
+                feather: INITIAL_STATS.feather,
+                emoji: '🐓'
+            };
+            currentChickens = [originalChicken];
+            renderChickenCards([originalChicken], true);
+
+            breedBtn.classList.remove('hidden');
+            nextGenBtn.classList.add('hidden');
+            breedBtn.disabled = true;
+            nextGenBtn.disabled = false;
+            breedBtn.textContent = '🐣 开始孵化第 1 代';
+
+            resultModal.classList.remove('show');
+        }
+
+        /* ============================================================
+           事件绑定
+           ============================================================ */
+        breedBtn.addEventListener('click', () => {
+            if (animating) return;
+            if (gameFinished) {
+                if (modalClosed) initGame();
+                return;
+            }
+            if (!currentTarget) return;
+            if (!waitingForSelection) breedNextGeneration();
+        });
+
+        nextGenBtn.addEventListener('click', () => {
+            if (gameFinished || !currentTarget || animating) return;
+            if (!waitingForSelection && selectedChicken) breedNextGeneration();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            resultModal.classList.remove('show');
+            initGame();
+        });
+
+        modalCloseBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeResultModal();
+        });
+
+        resultModal.addEventListener('click', (e) => {
+            if (e.target === resultModal) {
+                closeResultModal();
+            }
+        });
+
+        optEgg.addEventListener('click', () => selectTarget('egg'));
+        optMeat.addEventListener('click', () => selectTarget('meat'));
+        optFeather.addEventListener('click', () => selectTarget('feather'));
+
+        initGame();
+    })();
+</script>
+</body>
+</html>
